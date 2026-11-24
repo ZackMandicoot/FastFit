@@ -11,6 +11,18 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.CustomCredential
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.ClearCredentialException
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun LoginScreen() {
@@ -20,6 +32,13 @@ fun LoginScreen() {
     val auth = remember { FirebaseAuth.getInstance() }
     var isLoggedIn by remember {
         mutableStateOf(auth.currentUser != null)
+    }
+    val context = LocalContext.current
+    val webClientId = "253072218842-7bdv01a1sajn2k225sq4ir4ub6nnrn5s"
+    val coroutineScope = rememberCoroutineScope()
+
+    val credentialManager = remember {
+        CredentialManager.create(context)
     }
 
     if (isLoggedIn) {
@@ -37,6 +56,17 @@ fun LoginScreen() {
                     auth.signOut()
                     isLoggedIn = false
                     password = ""
+                    errorMessage = ""
+
+                    coroutineScope.launch {
+                        try {
+                            credentialManager.clearCredentialState(
+                                ClearCredentialStateRequest()
+                            )
+                        } catch (e: ClearCredentialException) {
+                            // Firebase session is already signed out.
+                        }
+                    }
                 }
             ) {
                 Text("Logout")
@@ -115,6 +145,69 @@ fun LoginScreen() {
                 text = errorMessage,
                 color = MaterialTheme.colorScheme.error
             )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = {
+                errorMessage = ""
+
+                coroutineScope.launch {
+                    try {
+                        val googleOption = GetSignInWithGoogleOption.Builder(
+                            webClientId
+                        ).build()
+
+                        val request = GetCredentialRequest.Builder()
+                            .addCredentialOption(googleOption)
+                            .build()
+
+                        val result = credentialManager.getCredential(
+                            context = context,
+                            request = request
+                        )
+
+                        val credential = result.credential
+
+                        if (credential is CustomCredential &&
+                            credential.type ==
+                            GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                        ) {
+                            val googleCredential =
+                                GoogleIdTokenCredential.createFrom(
+                                    credential.data
+                                )
+
+                            val firebaseCredential =
+                                GoogleAuthProvider.getCredential(
+                                    googleCredential.idToken,
+                                    null
+                                )
+
+                            auth.signInWithCredential(firebaseCredential)
+                                .addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        isLoggedIn = true
+                                        errorMessage = ""
+                                    } else {
+                                        errorMessage = "Google login failed."
+                                    }
+                                }
+                        } else {
+                            errorMessage = "Unexpected credential type."
+                        }
+
+                    } catch (e: GetCredentialException) {
+                        errorMessage = "Google sign-in failed: ${e.message}"
+                    } catch (e: Exception) {
+                        errorMessage = "Unable to complete Google sign-in."
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Sign in with Google")
         }
     }
 }
