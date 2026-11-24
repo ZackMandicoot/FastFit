@@ -41,6 +41,8 @@ fun LoginScreen() {
         CredentialManager.create(context)
     }
 
+    var successMessage by remember { mutableStateOf("") }
+
     if (isLoggedIn) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -139,6 +141,14 @@ fun LoginScreen() {
         }
 
         if (errorMessage.isNotEmpty()) {
+            if (successMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = successMessage,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
@@ -148,6 +158,56 @@ fun LoginScreen() {
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        TextButton(
+            onClick = {
+                if (email.isBlank() || password.isBlank()) {
+                    errorMessage = "Please enter your email and password."
+                } else if (password.length < 6) {
+                    errorMessage = "Password must be at least 6 characters."
+                } else {
+                    errorMessage = ""
+
+                    auth.createUserWithEmailAndPassword(
+                        email.trim(),
+                        password
+                    ).addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            isLoggedIn = true
+                            errorMessage = ""
+                        } else {
+                            errorMessage = task.exception?.localizedMessage
+                                ?: "Unable to create account."
+                        }
+                    }
+                }
+            }
+        ) {
+            Text("First time? Create account")
+        }
+
+        TextButton(
+            onClick = {
+                errorMessage = ""
+                successMessage = ""
+
+                if (email.isBlank()) {
+                    errorMessage = "Please enter your email address."
+                } else {
+                    auth.sendPasswordResetEmail(email.trim())
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                successMessage =
+                                    "If an account exists, a reset link will be sent."
+                            } else {
+                                errorMessage = "Unable to send password reset email."
+                            }
+                        }
+                }
+            }
+        ) {
+            Text("Forgot password?")
+        }
 
         OutlinedButton(
             onClick = {
