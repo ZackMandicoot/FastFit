@@ -44,10 +44,13 @@ fun LoginScreen() {
     var successMessage by remember { mutableStateOf("") }
 
     if (isLoggedIn) {
+        val currentUserId = auth.currentUser?.uid
         var selectedRestaurant by remember { mutableStateOf<RestaurantItem?>(null) }
         var showFavorites by remember { mutableStateOf(false) }
-        val favoriteMeals = remember {
-            mutableStateListOf<FavoriteMeal>()
+        val favoriteMeals = remember(currentUserId) {
+            mutableStateListOf<FavoriteMeal>().apply {
+                addAll(loadUserFavorites(context, currentUserId))
+            }
         }
 
         val logout: () -> Unit = {
@@ -74,8 +77,14 @@ fun LoginScreen() {
             showFavorites -> {
                 FavoritesScreen(
                     favoriteMeals = favoriteMeals,
-                    onRemoveFavorite = { meal -> favoriteMeals.remove(meal) },
-                    onClearFavorites = { favoriteMeals.clear() },
+                    onRemoveFavorite = { meal ->
+                        favoriteMeals.remove(meal)
+                        saveUserFavorites(context, currentUserId, favoriteMeals)
+                    },
+                    onClearFavorites = {
+                        favoriteMeals.clear()
+                        saveUserFavorites(context, currentUserId, favoriteMeals)
+                    },
                     onAddMoreClick = {
                         showFavorites = false
                         selectedRestaurant = null
@@ -95,6 +104,7 @@ fun LoginScreen() {
                     onBackClick = { selectedRestaurant = null },
                     onAddToLogClick = { item ->
                         favoriteMeals.add(item.toFavoriteMeal(currentRestaurant.name))
+                        saveUserFavorites(context, currentUserId, favoriteMeals)
                     }
                 )
             }

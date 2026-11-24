@@ -47,6 +47,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 
 private val FavNavy = Color(0xFF13294B)
 private val FavOrange = Color(0xFFE57200)
@@ -85,6 +88,53 @@ val defaultFavoriteMeals = listOf(
         fatGrams = 14
     )
 )
+
+private const val FAVORITES_PREFS_NAME = "fastfit_user_favorites"
+
+fun loadUserFavorites(context: Context, userId: String?): List<FavoriteMeal> {
+    if (userId.isNullOrBlank()) return emptyList()
+    val prefs = context.getSharedPreferences(FAVORITES_PREFS_NAME, Context.MODE_PRIVATE)
+    val rawJson = prefs.getString("favorites_$userId", null) ?: return emptyList()
+
+    return try {
+        val jsonArray = JSONArray(rawJson)
+        List(jsonArray.length()) { index ->
+            val obj = jsonArray.getJSONObject(index)
+            FavoriteMeal(
+                id = obj.getString("id"),
+                restaurantName = obj.getString("restaurantName"),
+                mealName = obj.getString("mealName"),
+                calories = obj.getInt("calories"),
+                proteinGrams = obj.getInt("proteinGrams"),
+                carbsGrams = obj.getInt("carbsGrams"),
+                fatGrams = obj.getInt("fatGrams")
+            )
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
+
+fun saveUserFavorites(context: Context, userId: String?, meals: List<FavoriteMeal>) {
+    if (userId.isNullOrBlank()) return
+    val jsonArray = JSONArray()
+    meals.forEach { meal ->
+        val obj = JSONObject().apply {
+            put("id", meal.id)
+            put("restaurantName", meal.restaurantName)
+            put("mealName", meal.mealName)
+            put("calories", meal.calories)
+            put("proteinGrams", meal.proteinGrams)
+            put("carbsGrams", meal.carbsGrams)
+            put("fatGrams", meal.fatGrams)
+        }
+        jsonArray.put(obj)
+    }
+    context.getSharedPreferences(FAVORITES_PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putString("favorites_$userId", jsonArray.toString())
+        .apply()
+}
 
 @Composable
 fun FavoritesScreen(
