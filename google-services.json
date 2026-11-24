@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "253072218842",
+    "project_id": "fastfit-a6bdd",
+    "storage_bucket": "fastfit-a6bdd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:253072218842:android:db0618af43e63cf88ce3e3",
+        "android_client_info": {
+          "package_name": "edu.virginia.cs4720.fastfit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCU09gLD_88Ki6Ix4d4jyzxTRj7iNNQbag"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
