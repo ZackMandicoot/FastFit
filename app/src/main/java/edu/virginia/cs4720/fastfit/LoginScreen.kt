@@ -44,36 +44,27 @@ fun LoginScreen() {
     var successMessage by remember { mutableStateOf("") }
 
     if (isLoggedIn) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text("Welcome to FastFit!")
+        val logout: () -> Unit = {
+            auth.signOut()
+            isLoggedIn = false
+            password = ""
+            errorMessage = ""
 
-            Text(auth.currentUser?.email ?: "")
-
-            Button(
-                onClick = {
-                    auth.signOut()
-                    isLoggedIn = false
-                    password = ""
-                    errorMessage = ""
-
-                    coroutineScope.launch {
-                        try {
-                            credentialManager.clearCredentialState(
-                                ClearCredentialStateRequest()
-                            )
-                        } catch (e: ClearCredentialException) {
-                            // Firebase session is already signed out.
-                        }
-                    }
+            coroutineScope.launch {
+                try {
+                    credentialManager.clearCredentialState(
+                        ClearCredentialStateRequest()
+                    )
+                } catch (e: ClearCredentialException) {
+                    // Firebase session is already signed out.
                 }
-            ) {
-                Text("Logout")
             }
         }
+
+        RestaurantScreen(
+            onBackClick = logout,
+            onHomeClick = { /* Already on RestaurantScreen */ }
+        )
         return
     }
 
