@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.TextButton
 
 // UVA-inspired palette matching the mockup
 private val FastFitNavy = Color(0xFF13294B)
@@ -187,16 +188,23 @@ private fun RestaurantTopBar(onBackClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 12.dp)
+                .padding(horizontal = 10.dp, vertical = 12.dp)
         ) {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.align(Alignment.CenterStart)
+            Surface(
+                color = FastFitOrange,
+                shape = RoundedCornerShape(8.dp),
+                shadowElevation = 2.dp,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .clickable(onClick = onBackClick)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White
+                Text(
+                    text = "Log out",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                 )
             }
 
