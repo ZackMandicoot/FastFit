@@ -44,6 +44,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.firestore.FirebaseFirestore
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.DisposableEffect
 
 private val MenuNavy = Color(0xFF13294B)
 private val MenuGreen = Color(0xFF3E7B48)
@@ -104,21 +108,92 @@ val defaultMenuItems = listOf(
 fun MenuScreen(
     restaurantName: String = "Default Restaurant",
     restaurantId: String = "default_1",
-    menuItems: List<MenuItem> = defaultMenuItems,
     onBackClick: () -> Unit = {},
     onAddToLogClick: (MenuItem) -> Unit = {}
 ) {
+    val db = remember { FirebaseFirestore.getInstance() }
+
+    var menuItems by remember(restaurantId) {
+        mutableStateOf(emptyList<MenuItem>())
+    }
+
+    var isLoading by remember(restaurantId) {
+        mutableStateOf(true)
+    }
+
+    var errorMessage by remember(restaurantId) {
+        mutableStateOf("")
+    }
+
+    DisposableEffect(restaurantId) {
+        val listener = db.collection("restaurants")
+            .document(restaurantId)
+            .collection("menuItems")
+            .addSnapshotListener { snapshot, error ->
+
+                if (error != null) {
+                    errorMessage = "Unable to load menu: ${error.message}"
+                    isLoading = false
+                } else {
+                    menuItems = snapshot?.documents?.map { document ->
+                        MenuItem(
+                            id = document.id,
+                            restaurantId = restaurantId,
+                            name = document.getString("name") ?: "",
+                            calories = document.getLong("calories")?.toInt() ?: 0,
+                            proteinGrams = document.getLong("proteinGrams")?.toInt() ?: 0,
+                            carbsGrams = document.getLong("carbsGrams")?.toInt() ?: 0,
+                            fatGrams = document.getLong("fatGrams")?.toInt() ?: 0,
+                            goalCalories = document.getLong("goalCalories")?.toInt() ?: 500
+                        )
+                    } ?: emptyList()
+
+                    errorMessage = ""
+                    isLoading = false
+                }
+            }
+
+        onDispose {
+            listener.remove()
+        }
+    }
+
     var selectedFilter by remember { mutableStateOf(MenuFilter.HIGH_PROTEIN) }
 
     val displayedItems = remember(menuItems, restaurantId, selectedFilter) {
-        val forRestaurant = menuItems.filter { it.restaurantId == restaurantId }
-        val baseList = if (forRestaurant.isNotEmpty()) forRestaurant else menuItems
+        val forRestaurant = menuItems.filter {
+            it.restaurantId == restaurantId
+        }
 
         when (selectedFilter) {
-            MenuFilter.MAX_CALORIES -> baseList.sortedByDescending { it.calories }
-            MenuFilter.HIGH_PROTEIN -> baseList.sortedByDescending { it.proteinGrams }
-            MenuFilter.LOW_CARB -> baseList.sortedBy { it.carbsGrams }
+            MenuFilter.MAX_CALORIES ->
+                forRestaurant.sortedByDescending { it.calories }
+
+            MenuFilter.HIGH_PROTEIN ->
+                forRestaurant.sortedByDescending { it.proteinGrams }
+
+            MenuFilter.LOW_CARB ->
+                forRestaurant.sortedBy { it.carbsGrams }
         }
+    }
+
+    if (isLoading || errorMessage.isNotEmpty()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator()
+            } else {
+                Text(errorMessage)
+            }
+
+            Button(onClick = onBackClick) {
+                Text("Back")
+            }
+        }
+        return
     }
 
     ScaffoldLayout(
