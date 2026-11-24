@@ -44,7 +44,15 @@ fun LoginScreen() {
     var successMessage by remember { mutableStateOf("") }
 
     if (isLoggedIn) {
+        var selectedRestaurant by remember { mutableStateOf<RestaurantItem?>(null) }
+        var showFavorites by remember { mutableStateOf(false) }
+        val favoriteMeals = remember {
+            mutableStateListOf<FavoriteMeal>()
+        }
+
         val logout: () -> Unit = {
+            selectedRestaurant = null
+            showFavorites = false
             auth.signOut()
             isLoggedIn = false
             password = ""
@@ -61,10 +69,50 @@ fun LoginScreen() {
             }
         }
 
-        RestaurantScreen(
-            onBackClick = logout,
-            onHomeClick = { /* Already on RestaurantScreen */ }
-        )
+        val currentRestaurant = selectedRestaurant
+        when {
+            showFavorites -> {
+                FavoritesScreen(
+                    favoriteMeals = favoriteMeals,
+                    onRemoveFavorite = { meal -> favoriteMeals.remove(meal) },
+                    onClearFavorites = { favoriteMeals.clear() },
+                    onAddMoreClick = {
+                        showFavorites = false
+                        selectedRestaurant = null
+                    },
+                    onHomeClick = {
+                        showFavorites = false
+                        selectedRestaurant = null
+                    },
+                    onFoodLogClick = { /* Already on Favorites / Food Log */ }
+                )
+            }
+
+            currentRestaurant != null -> {
+                MenuScreen(
+                    restaurantName = currentRestaurant.name,
+                    restaurantId = currentRestaurant.id,
+                    onBackClick = { selectedRestaurant = null },
+                    onAddToLogClick = { item ->
+                        favoriteMeals.add(item.toFavoriteMeal(currentRestaurant.name))
+                    }
+                )
+            }
+
+            else -> {
+                RestaurantScreen(
+                    onBackClick = logout,
+                    onRestaurantClick = { restaurant ->
+                        selectedRestaurant = restaurant
+                    },
+                    onHomeClick = {
+                        showFavorites = false
+                        selectedRestaurant = null
+                    },
+                    onFoodLogClick = { showFavorites = true }
+                )
+            }
+        }
         return
     }
 
